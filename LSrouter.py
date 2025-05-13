@@ -4,7 +4,6 @@ import networkx as nx
 
 from router import Router
 
-
 class LSrouter(Router):
     """Link state routing protocol implementation.
 
@@ -71,20 +70,18 @@ class LSrouter(Router):
         self.routing_table = new_routes
 
     def broadcast_lsa(self, lsa, from_port=None):
-    
         lsa_str = json.dumps(lsa) 
         for port, info in self.neighbors.items():
             if from_port is not None and port == from_port:
-                continue    
+                continue
             neigh_addr = info['addr']
             packet = Packet(kind=Packet.ROUTING, 
                           src_addr=self.addr,
                           dst_addr=neigh_addr,
-                          content=lsa_str)  
+                          content=lsa_str)       
             self.send(port, packet)
 
         
-
     def handle_packet(self, port, packet):
         """Process incoming packet."""
         # TODO
@@ -113,7 +110,17 @@ class LSrouter(Router):
         # TODO
         #   update local data structures and forwarding table
         #   broadcast the new link state of this router to all neighbors
-        pass
+        if port in self.neighbors:
+            del self.neighbors[port]
+            self.seq_num += 1
+            lsa = self.create_lsa()
+            self.ls_db[self.addr] = {
+                'seq_num': lsa['seq_num'],
+                'links': lsa['links']
+            }
+            
+            self.update() 
+            self.broadcast_lsa(lsa)
 
     def handle_time(self, time_ms):
         """Handle current time."""
