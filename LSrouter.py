@@ -166,6 +166,8 @@ class LSrouter(Router):
             #   broadcast the link state of this router to all neighbors
             lsa = self.create_lsa()
             self.broadcast_lsa(lsa)
+    
+    
         
 
     def __repr__(self):
