@@ -1,8 +1,6 @@
-####################################################
-# LSrouter.py
-# Name:
-# HUID:
-#####################################################
+import json
+from packet import Packet
+import networkx as nx
 
 from router import Router
 
@@ -21,7 +19,71 @@ class LSrouter(Router):
         self.last_time = 0
         # TODO
         #   add your own class fields and initialization code here
-        pass
+        self.MAX_COST = float("inf")
+        self.seq_num = 0
+        self.neighbors = {}
+        self.ls_db = {
+            self.addr: {
+                'seq_num': self.seq_num,
+                'links': {}
+            }
+        }
+        self.routing_table = {self.addr: None}
+        self.graph = nx.Graph()
+
+    def update(self):
+        self.graph.clear()
+        all_nodes = set()
+
+        for router, lsa_data in self.ls_db.items():
+            all_nodes.add(router)
+            if 'links' in lsa_data:
+                for neigh, cost in lsa_data['links'].items():
+                    all_nodes.add(neigh)
+                    if cost < self.MAX_COST:
+                        self.graph.add_edge(router, neigh, weight=cost)
+        
+        for info in self.neighbors.values():
+            all_nodes.add(info['addr'])
+            if info['addr'] not in self.ls_db:
+                if info['cost'] < self.MAX_COST:
+                    self.graph.add_edge(self.addr, info['addr'], weight=info['cost'])
+
+        if not self.addr in self.graph:
+            return
+
+        new_routes = {self.addr: None}
+        paths = nx.single_source_dijkstra_path(self.graph, self.addr)
+
+        for dest in paths:
+            if dest == self.addr:
+                continue
+            if len(paths[dest]) > 1:
+                next_hop = paths[dest][1]          
+                port = None
+                for p, info in self.neighbors.items():
+                    if info['addr'] == next_hop:
+                        port = p
+                        break            
+                if port is not None:
+                    new_routes[dest] = port
+
+        self.routing_table = new_routes
+
+    def broadcast_lsa(self, lsa, from_port=None):
+    
+        lsa_str = json.dumps(lsa) 
+        for port, info in self.neighbors.items():
+            if from_port is not None and port == from_port:
+                continue    
+            neigh_addr = info['addr']
+            packet = Packet(kind=Packet.ROUTING, 
+                          src_addr=self.addr,
+                          dst_addr=neigh_addr,
+                          content=lsa_str)  
+            self.send(port, packet)
+
+        
 
     def handle_packet(self, port, packet):
         """Process incoming packet."""
