@@ -112,7 +112,7 @@ class LSrouter(Router):
         }
         self.update()
         self.broadcast_lsa(lsa)
-        pass
+        
 
     def handle_remove_link(self, port):
         """Handle removed link."""
@@ -139,7 +139,7 @@ class LSrouter(Router):
             #   broadcast the link state of this router to all neighbors
             lsa = self.create_lsa()
             self.broadcast_lsa(lsa)
-            pass
+        
 
     def __repr__(self):
         """Representation for debugging in the network visualizer."""
