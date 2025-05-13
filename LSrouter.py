@@ -68,6 +68,17 @@ class LSrouter(Router):
                     new_routes[dest] = port
 
         self.routing_table = new_routes
+    
+    def create_lsa(self):
+        links = {}
+        for info in self.neighbors.values():
+            links[info['addr']] = info['cost']
+        
+        return {
+            'source_router': self.addr,
+            'seq_num': self.seq_num,
+            'links': links
+        }
 
     def broadcast_lsa(self, lsa, from_port=None):
         lsa_str = json.dumps(lsa) 
