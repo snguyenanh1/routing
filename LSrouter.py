@@ -103,6 +103,15 @@ class LSrouter(Router):
         # TODO
         #   update local data structures and forwarding table
         #   broadcast the new link state of this router to all neighbors
+        self.neighbors[port] = {'addr': endpoint, 'cost': cost}
+        self.seq_num += 1
+        lsa = self.create_lsa()
+        self.ls_db[self.addr] = {
+            'seq_num': lsa['seq_num'],
+            'links': lsa['links']
+        }
+        self.update()
+        self.broadcast_lsa(lsa)
         pass
 
     def handle_remove_link(self, port):
@@ -128,6 +137,8 @@ class LSrouter(Router):
             self.last_time = time_ms
             # TODO
             #   broadcast the link state of this router to all neighbors
+            lsa = self.create_lsa()
+            self.broadcast_lsa(lsa)
             pass
 
     def __repr__(self):
