@@ -30,6 +30,18 @@ class LSrouter(Router):
         self.routing_table = {self.addr: None}
         self.graph = nx.Graph()
 
+    def create_lsa(self):
+        links = {}
+        for val in self.neighbors.values():
+            links[val['addr']] = val['cost']
+        
+        return {
+            'source_router': self.addr,
+            'seq_num': self.seq_num,
+            'links': links
+        }
+
+
     def update(self):
         self.graph.clear()
         all_nodes = set()
@@ -42,14 +54,11 @@ class LSrouter(Router):
                     if cost < self.MAX_COST:
                         self.graph.add_edge(router, neigh, weight=cost)
         
-        for info in self.neighbors.values():
-            all_nodes.add(info['addr'])
-            if info['addr'] not in self.ls_db:
-                if info['cost'] < self.MAX_COST:
-                    self.graph.add_edge(self.addr, info['addr'], weight=info['cost'])
-
-        if not self.addr in self.graph:
-            return
+        for val in self.neighbors.values():
+            all_nodes.add(val['addr'])
+            if val['addr'] not in self.ls_db:
+                if val['cost'] < self.MAX_COST:
+                    self.graph.add_edge(self.addr, val['addr'], weight=val['cost'])
 
         new_routes = {self.addr: None}
         paths = nx.single_source_dijkstra_path(self.graph, self.addr)
@@ -57,29 +66,17 @@ class LSrouter(Router):
         for dest in paths:
             if dest == self.addr:
                 continue
-            if len(paths[dest]) > 1:
-                next_hop = paths[dest][1]          
-                port = None
-                for p, info in self.neighbors.items():
-                    if info['addr'] == next_hop:
-                        port = p
-                        break            
-                if port is not None:
-                    new_routes[dest] = port
+            next_hop = paths[dest][1]          
+            port = None
+            for p, val in self.neighbors.items():
+                if val['addr'] == next_hop:
+                    port = p
+                    break            
+            if port is not None:
+                new_routes[dest] = port
 
         self.routing_table = new_routes
     
-    def create_lsa(self):
-        links = {}
-        for info in self.neighbors.values():
-            links[info['addr']] = info['cost']
-        
-        return {
-            'source_router': self.addr,
-            'seq_num': self.seq_num,
-            'links': links
-        }
-
     def broadcast_lsa(self, lsa, from_port=None):
         lsa_str = json.dumps(lsa) 
         for port, info in self.neighbors.items():
@@ -91,7 +88,6 @@ class LSrouter(Router):
                           dst_addr=neigh_addr,
                           content=lsa_str)       
             self.send(port, packet)
-
         
     def handle_packet(self, port, packet):
         """Process incoming packet."""
@@ -176,20 +172,11 @@ class LSrouter(Router):
             # TODO
             #   broadcast the link state of this router to all neighbors
             lsa = self.create_lsa()
-            self.broadcast_lsa(lsa)
-    
-    
-        
+            self.broadcast_lsa(lsa)     
 
     def __repr__(self):
         """Representation for debugging in the network visualizer."""
-        # TODO
-        #   NOTE This method is for your own convenience and will not be graded
-        ls_db_debug = {}
-        for router, data in self.ls_db.items():
-            ls_db_debug[router] = {'seq': data.get('seq_num', -1), 'links': len(data.get('links', {}))}
-        
         return (f"LSrouter(addr={self.addr}, seq={self.seq_num})\n"
-                f"  Neighbors: { {p: nei['addr'] for p, nei in self.neighbors.items()} }\n"
+                f"  Neighbors: {dict((p, nei['addr']) for p, nei in self.neighbors.items())}\n"
                 f"  Routes: {self.routing_table}\n"
-                f"  LSDB: {ls_db_debug}")
+                f"  LSDB: {dict((r, {'seq': d.get('seq_num', -1), 'links': len(d.get('links', {}))}) for r, d in self.ls_db.items())}")
