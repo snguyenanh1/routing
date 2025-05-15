@@ -52,11 +52,6 @@ class LSrouter(Router):
                 for neigh, cost in lsa_data['links'].items():
                     all_nodes.add(neigh)
                     self.graph.add_edge(router, neigh, weight=cost)
-        
-        for val in self.neighbors.values():
-            all_nodes.add(val['addr'])
-            if val['addr'] not in self.ls_db:
-                self.graph.add_edge(self.addr, val['addr'], weight=val['cost'])
 
         new_routes = {self.addr: None}
         paths = nx.single_source_dijkstra_path(self.graph, self.addr)
