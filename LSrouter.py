@@ -44,13 +44,10 @@ class LSrouter(Router):
 
     def update(self):
         self.graph.clear()
-        all_nodes = set()
 
         for router, lsa_data in self.ls_db.items():
-            all_nodes.add(router)
             if 'links' in lsa_data:
                 for neigh, cost in lsa_data['links'].items():
-                    all_nodes.add(neigh)
                     self.graph.add_edge(router, neigh, weight=cost)
 
         new_routes = {self.addr: None}
